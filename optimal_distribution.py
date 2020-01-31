@@ -1,9 +1,12 @@
 from sqlalchemy.util import namedtuple
 
-ChiptSet = namedtuple('chips_set', [
-    'amount',
-    'nominal'
-])
+ChiptSet = namedtuple(
+    typename='chips_set',
+    field_names=[
+        'amount',
+        'nominal'
+    ]
+)
 
 chips = [ChiptSet(100, 5),
          ChiptSet(100, 25),
@@ -11,22 +14,13 @@ chips = [ChiptSet(100, 5),
          ChiptSet(50, 100)]
 
 total_chips_amount = sum([chips_set.amount * chips_set.nominal for chips_set in chips])
-chips_per_person = 600
+print(f"Total amount of chips {total_chips_amount}")
+chips_per_person = 650
 persons_amount = 7
 rebuys = 3
 persons_to_count = persons_amount + rebuys
 
 max_chips_per_person = [ChiptSet(int(chip_set.amount / persons_to_count), chip_set.nominal) for chip_set in chips]
-
-#
-# def balanced_calc_chips(chip_set, sum_left):
-#     new_sum_left = sum_left - chip_set.amount * chip_set.nominal
-#     if len(chip_set) == 1:
-#         return (chip_set,), new_sum_left
-#     else:
-
-
-
 
 
 def calc_chips(chip_set, sum_left):
