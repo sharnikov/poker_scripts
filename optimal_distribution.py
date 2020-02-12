@@ -80,7 +80,6 @@ def get_rebalanced_chip_sets(raw_result, chips_left):
 
 max_chips_per_person = sorted(
     tuple(ChipSet(chip_set.nominal, int(chip_set.amount / persons_to_count)) for chip_set in chips_sets),
-    key=lambda chip_set: chip_set.nominal,
     reverse=True
 )
 
