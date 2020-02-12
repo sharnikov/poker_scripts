@@ -58,19 +58,17 @@ def substitute_chip_sets(sets_from, sets_to_substitute):
 
 def rebalance_lower_pair(chips_set, chips_left):
     sum = chips_set.nominal * chips_set.amount
-    rebalanced_chip_set = calculate(chips_left, sum)
-    returned_chip_set_amount = chips_set.amount - [rebalanced_chip_set.amount
-                                                   for rebalanced_chip_set
-                                                   in rebalanced_chip_set
-                                                   if rebalanced_chip_set.nominal == chips_set.nominal][0]
 
-    new_chips_left = substitute_chip_sets(chips_left, rebalanced_chip_set)
-    new_chips_left_with_returned = [left_chip_set
-                                    if chips_set.nominal != left_chip_set.nominal
-                                    else ChipSet(left_chip_set.nominal, left_chip_set.amount + returned_chip_set_amount)
-                                    for left_chip_set in new_chips_left]
+    chips_left_with_returned = [left_chip_set
+                                if chips_set.nominal != left_chip_set.nominal
+                                else ChipSet(left_chip_set.nominal, left_chip_set.amount + chips_set.amount)
+                                for left_chip_set
+                                in chips_left]
 
-    return rebalanced_chip_set, new_chips_left_with_returned
+    rebalanced_chip_set = calculate(chips_left_with_returned, sum)
+    new_chips_left = substitute_chip_sets(chips_left_with_returned, rebalanced_chip_set)
+
+    return rebalanced_chip_set, new_chips_left
 
 
 def get_rebalanced_chip_sets(raw_result, chips_left):
