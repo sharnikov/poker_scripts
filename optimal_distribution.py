@@ -1,26 +1,29 @@
 from sqlalchemy.util import namedtuple
+from functools import reduce
+import operator
 
-ChiptSet = namedtuple(
+ChipSet = namedtuple(
     typename='chips_set',
     field_names=[
-        'amount',
-        'nominal'
+        'nominal',
+        'amount'
     ]
 )
 
-chips = [ChiptSet(100, 5),
-         ChiptSet(100, 25),
-         ChiptSet(50, 50),
-         ChiptSet(50, 100)]
 
-total_chips_amount = sum([chips_set.amount * chips_set.nominal for chips_set in chips])
-print(f"Total amount of chips {total_chips_amount}")
+chips_sets = [ChipSet(5, 100),
+              ChipSet(25, 100),
+              ChipSet(50, 50),
+              ChipSet(100, 50)]
+
+total_chips_amount = sum([chips_set.amount * chips_set.nominal for chips_set in chips_sets])
 chips_per_person = 650
+
+print(f"Total amount of chips {total_chips_amount}")
+
 persons_amount = 7
 rebuys = 3
 persons_to_count = persons_amount + rebuys
-
-max_chips_per_person = [ChiptSet(int(chip_set.amount / persons_to_count), chip_set.nominal) for chip_set in chips]
 
 
 def calc_single_set(chip_set, sum_left):
@@ -28,11 +31,13 @@ def calc_single_set(chip_set, sum_left):
         return (chip_set,), sum_left - chip_set.amount * chip_set.nominal
     else:
         chips_amount = int(sum_left / chip_set.nominal)
-        return (ChiptSet(chips_amount, chip_set.nominal),), sum_left - chips_amount * chip_set.nominal
+        return (ChipSet(chip_set.nominal, chips_amount),), sum_left - chips_amount * chip_set.nominal
 
 
 def calculate(chips, sum_left) -> tuple:
-    if sum_left == 0:
+    if sum_left == 0 and chips:
+        return tuple(ChipSet(chip_set.nominal, 0) for chip_set in chips)
+    elif sum_left == 0:
         return ()
     elif not chips:
         print(f"There are some uncalculated chips {sum_left}")
@@ -44,6 +49,52 @@ def calculate(chips, sum_left) -> tuple:
         return calc_chip_set + calculate(chips[1:], new_sum_left)
 
 
-result = calculate(max_chips_per_person, chips_per_person)
+def substitute_chip_sets(sets_from, sets_to_substitute):
+    return tuple(ChipSet(total.nominal, total.amount - occupied.amount)
+                 for occupied, total
+                 in zip(sorted(sets_to_substitute), sorted(sets_from))
+                 )
 
-[print(f"{chips_set.amount} of {chips_set.nominal}") for chips_set in result]
+
+def rebalance_lower_pair(chips_set, chips_left):
+    sum = chips_set.nominal * chips_set.amount
+    rebalanced_chip_set = calculate(chips_left, sum)
+    returned_chip_set_amount = chips_set.amount - [rebalanced_chip_set.amount
+                                                   for rebalanced_chip_set
+                                                   in rebalanced_chip_set
+                                                   if rebalanced_chip_set.nominal == chips_set.nominal][0]
+
+    new_chips_left = substitute_chip_sets(chips_left, rebalanced_chip_set)
+    new_chips_left_with_returned = [left_chip_set
+                                    if chips_set.nominal != left_chip_set.nominal
+                                    else ChipSet(left_chip_set.nominal, left_chip_set.amount + returned_chip_set_amount)
+                                    for left_chip_set in new_chips_left]
+
+    return rebalanced_chip_set, new_chips_left_with_returned
+
+
+def get_rebalanced_chip_sets(raw_result, chips_left):
+    if not raw_result:
+        return (),
+    else:
+        rebalanced_chip_set, new_chips_left = rebalance_lower_pair(raw_result[-1:][0], chips_left)
+        return (rebalanced_chip_set,) + get_rebalanced_chip_sets(raw_result[:-1], new_chips_left)
+
+max_chips_per_person = sorted(
+    tuple(ChipSet(chip_set.nominal, int(chip_set.amount / persons_to_count)) for chip_set in chips_sets),
+    key=lambda chip_set: chip_set.nominal,
+    reverse=True
+)
+
+raw_result = calculate(max_chips_per_person, chips_per_person)
+chips_left = substitute_chip_sets(max_chips_per_person, raw_result)
+result_sets = list(filter(lambda value: value, get_rebalanced_chip_sets(raw_result, chips_left)))
+
+result = reduce(lambda l1, l2: [ChipSet(ch_set1.nominal, ch_set1.amount + ch_set2.amount)
+                                for ch_set1, ch_set2
+                                in zip(l1, l2)],
+                result_sets
+                )
+
+
+print(result)
